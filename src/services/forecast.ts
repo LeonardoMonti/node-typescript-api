@@ -1,21 +1,7 @@
 import { StormGlass } from '@src/clients/stormGlass';
 import { IForecastPoint } from '@src/clients/interfaces/IStormGlass';
 import { InternalError } from '@src/util/errors/internal-error';
-
-export enum IBeachPosition {
-  S = 'S',
-  E = 'E',
-  W = 'W',
-  N = 'N',
-}
-
-export interface IBeach {
-  name: string;
-  position: IBeachPosition;
-  lat: number;
-  lng: number;
-  user: string;
-}
+import { IBeach } from '@src/models/beach';
 
 export interface IBeachForecast extends Omit<IBeach, 'user'>, IForecastPoint {}
 
@@ -29,6 +15,7 @@ export class ForecastProcessingInternalError extends InternalError {
     super(`Unexpected error during the forecast processing: ${message}`);
   }
 }
+
 export class Forecast {
   constructor(protected stormGlass = new StormGlass()) {}
 
