@@ -27,7 +27,7 @@ const schema = new Schema(
       transform: (_, ret): void => {
         ret.id = ret._id;
         delete ret._id;
-        delete ret.__b;
+        delete ret.__v;
       },
     },
   }
