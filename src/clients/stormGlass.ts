@@ -1,55 +1,70 @@
-import { AxiosStatic } from 'axios';
+import { InternalError } from '@src/util/errors/internal-error';
+import config, { IConfig } from 'config';
+import * as HTTPUtil from '@src/util/request';
+import {
+  IForecastPoint,
+  IStormGlassForecastResponse,
+  IStormGlassPoint,
+} from './interfaces/IStormGlass';
 
-export interface IStormGlassPointSource {
-  [key: string]: number;
+export class ClientRequestError extends InternalError {
+  constructor(message: string) {
+    const internalMessage =
+      'Unexpected error when trying to communicate to StormGlass';
+    super(`${internalMessage}: ${message}`);
+  }
 }
 
-export interface IStormGlassPoint {
-  readonly time: string;
-  readonly swellDirection: IStormGlassPointSource;
-  readonly swellHeight: IStormGlassPointSource;
-  readonly swellPeriod: IStormGlassPointSource;
-  readonly waveDirection: IStormGlassPointSource;
-  readonly waveHeight: IStormGlassPointSource;
-  readonly windDirection: IStormGlassPointSource;
-  readonly windSpeed: IStormGlassPointSource;
+export class StormGlassResponseError extends InternalError {
+  constructor(message: string) {
+    const internalMessage =
+      'Unexpected error returned by the StormGlass service';
+    super(`${internalMessage}: ${message}`);
+  }
 }
 
-export interface IStormGlassForecastResponse {
-  hours: IStormGlassPoint[];
-}
-
-export interface IForecastPoint {
-  time: string;
-  swellDirection: number;
-  swellHeight: number;
-  swellPeriod: number;
-  waveDirection: number;
-  waveHeight: number;
-  windDirection: number;
-  windSpeed: number;
-}
+const stormglassResourceConfig: IConfig = config.get(
+  'App.resources.StormGlass'
+);
 
 export class StormGlass {
   readonly stormGlassAPIParams =
     'swellDirection,swellHeight,swellPeriod,waveDirection,waveHeight,windDirection,windSpeed';
   readonly stormGlassAPISource = 'noaa';
-  constructor(protected request: AxiosStatic) {}
+
+  constructor(protected request = new HTTPUtil.Request()) {}
 
   public async fetchPoints(
     lat: number,
     lng: number
   ): Promise<IForecastPoint[]> {
-    const response = await this.request.get<IStormGlassForecastResponse>(
-      `https://api.stormglass.io/v2/weather/point?params=${this.stormGlassAPIParams}&source=${this.stormGlassAPISource}&end=1592113802&lat=${lat}&lng=${lng}`,
-      {
-        headers: {
-          Authorization: 'fake-token',
-        },
-      }
-    );
+    try {
+      const response = await this.request.get<IStormGlassForecastResponse>(
+        `${stormglassResourceConfig.get('apiUrl')}/weather/point?params=${
+          this.stormGlassAPIParams
+        }&source=${
+          this.stormGlassAPISource
+        }&end=1592113802&lat=${lat}&lng=${lng}`,
+        {
+          headers: {
+            Authorization: stormglassResourceConfig.get('apiToken'),
+          },
+        }
+      );
 
-    return this.normalizeResponse(response.data);
+      return this.normalizeResponse(response.data);
+    } catch (err) {
+      if (err instanceof Error && HTTPUtil.Request.isRequestError(err)) {
+        const error = HTTPUtil.Request.extractErrorData(err);
+        throw new StormGlassResponseError(
+          `Error: ${JSON.stringify(error.data)} Code: ${error.status}`
+        );
+      }
+      /**
+       * All the other errors will fallback to a generic client error
+       */
+      throw new ClientRequestError(JSON.stringify(err));
+    }
   }
 
   private normalizeResponse(
