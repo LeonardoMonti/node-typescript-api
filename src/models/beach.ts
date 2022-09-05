@@ -13,6 +13,7 @@ export interface IBeach {
   position: IBeachPosition;
   lat: number;
   lng: number;
+  user: string;
 }
 
 const schema = new Schema(
@@ -21,6 +22,7 @@ const schema = new Schema(
     position: { type: String, required: true },
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {
     toJSON: {
