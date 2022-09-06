@@ -2,6 +2,7 @@ import { StormGlass } from '@src/clients/stormGlass';
 import { IForecastPoint } from '@src/clients/interfaces/IStormGlass';
 import { InternalError } from '@src/util/errors/internal-error';
 import { IBeach } from '@src/models/beach';
+import logger from '@src/logger';
 
 export interface IBeachForecast extends Omit<IBeach, 'user'>, IForecastPoint {}
 
@@ -24,6 +25,7 @@ export class Forecast {
   ): Promise<ITimeForecast[]> {
     const pointsWithCorrectSources: IBeachForecast[] = [];
 
+    logger.info(`Preparing thhe forecast for ${beaches.length}`);
     try {
       for (const beach of beaches) {
         const points = await this.stormGlass.fetchPoints(beach.lat, beach.lng);
@@ -35,6 +37,7 @@ export class Forecast {
 
       return this.mapForecastByTime(pointsWithCorrectSources);
     } catch (err) {
+      logger.error(err);
       throw new ForecastProcessingInternalError((err as Error).message);
     }
   }
