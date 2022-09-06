@@ -60,7 +60,7 @@ export class SetupServer extends Server {
   }
 
   public start(): void {
-    this.app.listen(this.port, () => {
+    this.server = this.app.listen(this.port, () => {
       logger.info('Server listering of port: ' + this.port);
     });
   }
